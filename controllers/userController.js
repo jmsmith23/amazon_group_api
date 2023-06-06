@@ -77,8 +77,8 @@ exports.logoutUser = async (req, res, next) => {
 exports.listUsers = async (req, res) => {
   try {
     const listUsers = await User.find({});
-    res.render('/index', {
-      user: listUsers,
+    res.render('/Index', {
+      users: listUsers,
     });
   } catch (error) {
     res.status(421).json({ message: error.message });
