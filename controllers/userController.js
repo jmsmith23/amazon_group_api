@@ -50,11 +50,11 @@ exports.loginUser = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
   try {
+    const user = await User.findOne({ _id: req.params.id });
     const updates = Object.keys(req.body);
-    const user = await User.findOne({ _id: req.params.id }); // code breaks here, not connecting to DB
     updates.forEach((update) => (user[update] = req.body[update]));
     await user.save();
-    res.json({ user, message: `updated user info` });
+    res.status(200).json({ user, message: `updated user info` });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -62,7 +62,8 @@ exports.updateUser = async (req, res) => {
 
 exports.deleteUser = async (req, res) => {
   try {
-    await req.user.deleteOne();
+    const user = await User.findOne({ _id: req.params.id });
+    user.deleteOne();
     res.json({ message: 'User Deleted' });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -72,8 +73,7 @@ exports.deleteUser = async (req, res) => {
 exports.logoutUser = async (req, res, next) => {
   try {
     const user = req.body.email;
-    const token = null;
-    res.json({ user, token, message: 'Logout Successful' });
+    res.json({ user, message: 'Logout Successful' });
     // res.redirect('/');
   } catch (error) {
     res.status(421).json({ message: error.message });
@@ -83,7 +83,6 @@ exports.logoutUser = async (req, res, next) => {
 exports.listUsers = async (req, res) => {
   try {
     const listUsers = await User.find({});
-    console.log(listUsers);
     res.json({
       // this is where the bug was, "res.render" was sending a webpage with html data, not json data. Changed to "res.json"
       users: listUsers,

@@ -12,6 +12,12 @@ beforeAll(async () => {
   await mongoose.connect(mongoServer.getUri());
 });
 
+afterAll(async () => {
+  await mongoose.connection.close();
+  mongoServer.stop();
+  server.close();
+});
+
 describe('Test the user Endpoints', () => {
   test('It should create a new user', async () => {
     const response = await request(app) // supertest
@@ -42,7 +48,7 @@ describe('Test the user Endpoints', () => {
 
   test('It should return a list of users', async () => {
     const response = await request(app).get('/users');
-    expect(Array.isArray(response.body.users)).toBe(true); // expecting array even if empty
+    expect(Array.isArray(response.body.users)).toBe(true);
     expect(response.statusCode).toBe(200);
   });
 
@@ -51,7 +57,6 @@ describe('Test the user Endpoints', () => {
       .post('/users/logout')
       .send({ email: 'john.doe@example.com', password: 'password123' });
     // expect(response.body.user.email).toBe('john.doe@example.com');
-    expect(response.body.token).toBe(null);
     expect(response.body.message).toBe('Logout Successful');
   });
 
@@ -60,17 +65,22 @@ describe('Test the user Endpoints', () => {
       name: 'Bao',
       email: 'baoemail@email.com',
       password: '123',
-      id: '123',
     });
+    await user.save();
+    const token = await user.generateAuthToken();
+
     const response = await request(app)
       .put(`/users/${user.id}`)
+      .set('Authorization', `Bearer ${token}`)
       .send({
         name: 'Bao',
         email: 'baoemail@email.com',
         password: 'newPassword123',
       });
+    const foundUser = await User.findOne({ _id: user._id });
+
     expect(response.statusCode).toBe(200);
-    // expect(response.body.message).toBe(`updated user info`);
+    expect(response.body.message).toBe(`updated user info`);
   });
 
   test('It should delete the user', async () => {
@@ -79,15 +89,12 @@ describe('Test the user Endpoints', () => {
       email: 'john.doe@example.com',
       password: 'password123',
     });
+    const token = await user.generateAuthToken();
     await user.save();
-    const response = await request(app).delete('/:id');
+    const response = await request(app)
+      .delete(`/users/${user.id}`)
+      .set('Authorization', `Bearer ${token}`);
 
     expect(response.body.message).toBe('User Deleted');
   });
-});
-
-afterAll(async () => {
-  await mongoose.connection.close(); // programmatic ctrl+c
-  mongoServer.stop(); //getting rid of our MongoDB instance itself
-  server.close();
 });
